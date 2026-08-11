@@ -1,0 +1,32 @@
+services:
+  postgres-catalog:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: db_catalog
+      POSTGRES_USER: ${PG_CATALOG_USER}
+      POSTGRES_PASSWORD: ${PG_CATALOG_PASSWORD}
+    ports: ["5433:5432"]
+    volumes: [pgdata-catalog:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_CATALOG_USER} -d db_catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres-order:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: db_order
+      POSTGRES_USER: ${PG_ORDER_USER}
+      POSTGRES_PASSWORD: ${PG_ORDER_PASSWORD}
+    ports: ["5434:5432"]
+    volumes: [pgdata-order:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_ORDER_USER} -d db_order"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata-catalog:
+  pgdata-order:
