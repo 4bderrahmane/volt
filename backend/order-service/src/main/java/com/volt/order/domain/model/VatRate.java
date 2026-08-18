@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
-/** VAT rate expressed as a fraction, for example {@code 0.20} for 20%. */
 public record VatRate(BigDecimal rate) {
     public static final VatRate STANDARD = new VatRate(new BigDecimal("0.20"));
 

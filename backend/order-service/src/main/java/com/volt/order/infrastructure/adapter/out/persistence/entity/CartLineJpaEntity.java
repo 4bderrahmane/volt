@@ -16,7 +16,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Persistence representation of a row in {@code cart_line}. */
 @Entity
 @Table(name = "cart_line")
 @Getter

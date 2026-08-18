@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Persistence representation of the {@code orders} aggregate table. */
 @Entity
 @Table(name = "orders")
 @Getter

@@ -23,7 +23,6 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Persistence representation of the {@code product} aggregate. */
 @Entity
 @Table(name = "product")
 @Getter

@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-/** One durable cart per customer. Aggregate root for {@link CartLine}. */
 @Getter
 @ToString(of = {"id", "customerId"})
 public final class Cart {

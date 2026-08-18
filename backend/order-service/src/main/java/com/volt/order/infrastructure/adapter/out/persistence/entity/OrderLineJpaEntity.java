@@ -18,7 +18,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/** Persistence representation of an immutable order-line snapshot. */
 @Entity
 @Table(name = "order_line")
 @Getter

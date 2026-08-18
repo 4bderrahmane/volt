@@ -3,7 +3,6 @@ package com.volt.order.domain.model;
 import lombok.Getter;
 import lombok.ToString;
 
-/** A quantity of one catalog product owned by a {@link Cart}. */
 @Getter
 @ToString(of = {"productId", "quantity"})
 public final class CartLine {

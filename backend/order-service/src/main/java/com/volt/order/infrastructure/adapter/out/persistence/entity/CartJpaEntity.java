@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Persistence representation of the {@code cart} aggregate. */
 @Entity
 @Table(name = "cart")
 @Getter

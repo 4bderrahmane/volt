@@ -2,7 +2,6 @@ package com.volt.order.domain.model;
 
 import java.util.Objects;
 
-/** Lifecycle states for an order. */
 public enum OrderStatus {
     CREATED,
     CONFIRMED,

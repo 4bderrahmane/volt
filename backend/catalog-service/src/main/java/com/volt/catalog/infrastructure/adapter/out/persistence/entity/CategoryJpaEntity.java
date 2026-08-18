@@ -13,7 +13,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Persistence representation of the {@code category} table. */
 @Entity
 @Table(name = "category")
 @Getter

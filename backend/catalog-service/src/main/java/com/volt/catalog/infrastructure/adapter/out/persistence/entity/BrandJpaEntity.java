@@ -13,7 +13,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Persistence representation of the {@code brand} table. */
 @Entity
 @Table(name = "brand")
 @Getter

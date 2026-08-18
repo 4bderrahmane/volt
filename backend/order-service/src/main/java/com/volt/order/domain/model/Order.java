@@ -15,7 +15,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-/** Aggregate root for an immutable set of checkout snapshots. */
 @Getter
 @ToString(of = {"id", "number", "status"})
 public final class Order {

@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
-/** Immutable catalog snapshot captured when an order is placed. */
 @Getter
 @ToString(of = {"productReference", "quantity"})
 public final class OrderLine {

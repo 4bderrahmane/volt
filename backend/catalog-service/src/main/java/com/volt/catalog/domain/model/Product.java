@@ -24,16 +24,6 @@ public final class Product {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    /**
-     * Full constructor, used to reconstitute a product from persistence. The
-     * persistence adapter is its only caller; application code creating a new
-     * product uses {@link #create}.
-     *
-     * <p>Deliberately not {@code @AllArgsConstructor}: a generated constructor
-     * silently changes its parameter order when a field is reordered, and every
-     * call site keeps compiling because the types line up. Writing it out means
-     * a field reorder is a compile error, not a data-corruption bug.
-     */
     public Product(
             Long id,
             String reference,
@@ -71,9 +61,6 @@ public final class Product {
         this.updatedAt = requiredUpdatedAt;
     }
 
-    /**
-     * Creates a product that has not been persisted yet.
-     */
     public static Product create(
             String reference,
             String label,
@@ -93,10 +80,6 @@ public final class Product {
         this.updatedAt = now;
     }
 
-    /**
-     * Validates all new values before mutating. The reference is deliberately
-     * absent because it is the immutable business key.
-     */
     public void applyUpdate(
             String newLabel,
             String newDescription,
@@ -205,7 +188,6 @@ public final class Product {
 
         return id != null && id.equals(that.id);
     }
-
 
     @Override
     public int hashCode() {

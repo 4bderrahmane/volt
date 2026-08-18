@@ -30,7 +30,6 @@ public final class ReservationLine {
         return new ReservationLine(null, productId, quantity);
     }
 
-
     @Override
     public boolean equals(Object other) {
         if (this == other) return true;

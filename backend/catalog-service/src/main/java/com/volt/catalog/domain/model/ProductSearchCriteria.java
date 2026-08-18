@@ -1,10 +1,5 @@
 package com.volt.catalog.domain.model;
 
-/**
- * Search parameters for specification §F1/§F2. A domain type rather than a bag of
- * method arguments, so adding a filter does not change every signature between
- * the controller and the repository.
- */
 public record ProductSearchCriteria(
         String query,
         Long categoryId,

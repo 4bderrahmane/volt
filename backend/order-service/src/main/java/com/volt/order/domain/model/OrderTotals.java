@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
-/** Excluding-VAT total, VAT, and including-VAT total for an order or cart view. */
 public record OrderTotals(BigDecimal totalExclVat, BigDecimal vatAmount, BigDecimal totalInclVat) {
     public OrderTotals {
         totalExclVat = OrderLine.money(totalExclVat, "total excluding VAT");

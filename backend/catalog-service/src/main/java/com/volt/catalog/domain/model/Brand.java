@@ -18,7 +18,6 @@ public final class Brand {
         this.name = requireName(name);
     }
 
-    // a brand that has not been persisted yet.
     public static Brand create(String name) {
         return new Brand(null, name);
     }
@@ -46,8 +45,7 @@ public final class Brand {
         if (!(other instanceof Brand that)) {
             return false;
         }
-        // No id means no persistent identity yet, so two unsaved instances are
-        // equal only if they are the same object.
+
         return id != null && id.equals(that.id);
     }
 

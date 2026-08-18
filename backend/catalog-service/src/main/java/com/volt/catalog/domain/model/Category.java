@@ -20,7 +20,6 @@ public final class Category {
         this.label = requireText(label, "label", 128);
     }
 
-    // persistence entity obviously will handle IDs
     public static Category create(String code, String label) {
         return new Category(null, code, label);
     }
@@ -48,7 +47,7 @@ public final class Category {
         if (!(other instanceof Category that)) {
             return false;
         }
-        // no id means no persistent identity yet, so two unsaved instances are equal only if they are the same object.
+
         return id != null && id.equals(that.id);
     }
 
