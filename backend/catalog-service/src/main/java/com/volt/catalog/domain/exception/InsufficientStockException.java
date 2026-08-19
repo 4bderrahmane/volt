@@ -2,10 +2,12 @@ package com.volt.catalog.domain.exception;
 
 import com.volt.catalog.domain.model.StockShortage;
 
+import java.io.Serial;
 import java.util.List;
 
 public class InsufficientStockException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private final transient List<StockShortage> shortages;
