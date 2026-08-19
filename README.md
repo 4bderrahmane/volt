@@ -1,3 +1,3 @@
 # volt
 
-ElectroStore — internship project.
+internship project.
