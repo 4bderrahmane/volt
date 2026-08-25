@@ -1,0 +1,147 @@
+spring:
+  application:
+    name: catalog-service
+
+  datasource:
+    # Overridden by SPRING_DATASOURCE_* in docker-compose. The default targets
+    # the compose database on its published port, so `mvn spring-boot:run`
+    # against `docker compose up postgres-catalog` works with no extra flags.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_catalog}
+    username: ${SPRING_DATASOURCE_USERNAME:catalog_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+
+  jpa:
+    hibernate:
+      # ADR-0006: Flyway owns the schema everywhere. `validate` makes Hibernate
+      # compare its mappings against the migrated schema at startup, so an
+      # entity that has drifted from its table fails immediately with a precise
+      # message instead of throwing at the first query that touches the column.
+      # Never `update`, never `create-drop`, in any profile including tests.
+      ddl-auto: validate
+    # Without this, a lazy association can be initialised while the view renders,
+    # which means an entity reaching the web layer still holds a live session.
+    # In a hexagonal codebase that is a silent breach of the layering: the
+    # persistence adapter is supposed to have finished mapping to domain objects
+    # before anything else sees them.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 32
+        # Fails the build-up of a query plan that would trigger N+1 in pagination
+        # rather than silently issuing thousands of statements.
+        query:
+          fail_on_pagination_over_collection_fetch: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  threads:
+    virtual:
+      # Java 25 virtual threads: the reservation path blocks on a row lock, and
+      # blocking a virtual thread does not consume a platform thread.
+      enabled: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # ADR-0004 and infra/keycloak/README.md. issuer-uri must match the
+          # `iss` claim the *browser* obtained (localhost); jwk-set-uri must be
+          # resolvable from inside the compose network (keycloak). Setting both
+          # to the same host is the cause of the classic all-requests-401.
+          issuer-uri: ${VOLT_KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/volt}
+          jwk-set-uri: ${VOLT_KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/volt/protocol/openid-connect/certs}
+          audiences: volt-api
+
+server:
+  port: 8081
+  error:
+    # Error bodies come from the RestControllerAdvice as RFC 7807 (specification §6.3).
+    # Leaving Spring's default error attributes on leaks stack traces and gives
+    # two different error shapes from the same API.
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health for the compose healthcheck, info for the demo, metrics for the
+        # reservation-sweep gauge (ADR-0003). Not "*" — that publishes /env and
+        # /configprops, which contain the datasource password.
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# ----------------------------------------------------------------- application
+volt:
+  reservation:
+    # ADR-0003. 15 minutes is an opening guess, not a measurement: it trades
+    # stock made temporarily unsellable by abandoned checkouts against the risk
+    # of a reservation expiring mid-payment. Instrument real checkout duration
+    # before defending this number in the project report.
+    ttl: PT15M
+    sweep-interval: PT1M
+
+logging:
+  level:
+    com.volt.catalog: INFO
+
+---
+# --------------------------------------------------------------------- docker
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+server:
+  # Behind nginx (frontend/nginx.conf). Without this, Location headers built by
+  # ServletUriComponentsBuilder point at the container's internal name and a 201
+  # from §6.3 gives the browser a URL it cannot reach.
+  forward-headers-strategy: framework
+
+---
+# ----------------------------------------------------------------------- demo
+# Specification §12.5: 40+ products across 5 categories, loaded automatically. Activated
+# alongside `docker` in docker-compose.yml; leaving it off yields an empty schema.
+spring:
+  config:
+    activate:
+      on-profile: demo
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo
+#    community-db-support-enabled: false
+#    enabled: false
+    clean-disabled: true
+
+---
+# ----------------------------------------------------------------------- test
+# Testcontainers provides the datasource; Flyway migrates it, exactly as in
+# production (ADR-0006). This is the profile that makes green tests mean
+# something: they run against the real migrated schema.
+spring:
+  config:
+    activate:
+      on-profile: test
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+#      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+#    enabled: false
+    clean-disabled: true
+
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN
