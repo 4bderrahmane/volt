@@ -1,0 +1,144 @@
+{
+  "realm": "volt",
+  "enabled": true,
+  "displayName": "volt / ElectroStore",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      {
+        "name": "CLIENT",
+        "description": "Specification §F10 - browse, cart, own orders"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Specification §F4, §F9 - product CRUD and order status"
+      },
+      {
+        "name": "SERVICE",
+        "description": "Machine identity. Grants access to /internal/v1/** (ADR-0004). Never assign this to a human user."
+      }
+    ]
+  },
+  "defaultRoles": [
+    "CLIENT"
+  ],
+  "clients": [
+    {
+      "clientId": "volt-web",
+      "name": "volt SPA",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-volt-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "volt-api",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "volt-order",
+      "name": "order-service machine identity",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-only-not-a-real-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience-volt-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "volt-api",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "volt-api",
+      "name": "volt backend APIs (audience only)",
+      "enabled": true,
+      "bearerOnly": true
+    }
+  ],
+  "users": [
+    {
+      "username": "client@volt.test",
+      "email": "client@volt.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Camille",
+      "lastName": "Client",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "client",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CLIENT"
+      ]
+    },
+    {
+      "username": "admin@volt.test",
+      "email": "admin@volt.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Adam",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN",
+        "CLIENT"
+      ]
+    },
+    {
+      "username": "service-account-volt-order",
+      "enabled": true,
+      "serviceAccountClientId": "volt-order",
+      "realmRoles": [
+        "SERVICE"
+      ]
+    }
+  ],
+  "clientScopeMappings": {},
+  "scopeMappings": []
+}
