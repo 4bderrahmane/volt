@@ -1,3 +1,142 @@
+# =============================================================================
+# order-service
+# =============================================================================
+
 spring:
   application:
     name: order-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/db_order}
+    username: ${SPRING_DATASOURCE_USERNAME:order_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate      # ADR-0006 — Flyway owns the schema in every profile
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 32
+        query:
+          fail_on_pagination_over_collection_fetch: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  threads:
+    virtual:
+      enabled: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${VOLT_KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/volt}
+          jwk-set-uri: ${VOLT_KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/volt/protocol/openid-connect/certs}
+          audiences: volt-api
+
+      # Machine identity for calling catalog's /internal/v1/stock/** (ADR-0004).
+      # The client-credentials grant gives this service an identity of its own,
+      # separate from whichever user happens to be checking out — which is what
+      # lets catalog require ROLE_SERVICE there and keep the endpoints
+      # unreachable from a browser.
+      client:
+        registration:
+          catalog:
+            client-id: ${VOLT_CATALOG_CLIENT_ID:volt-order}
+            client-secret: ${VOLT_CATALOG_CLIENT_SECRET:dev-only-not-a-real-secret}
+            authorization-grant-type: client_credentials
+        provider:
+          catalog:
+            token-uri: ${VOLT_CATALOG_TOKEN_URI:http://localhost:8080/realms/volt/protocol/openid-connect/token}
+
+server:
+  port: 8082
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# ----------------------------------------------------------------- application
+volt:
+  catalog:
+    base-url: ${VOLT_CATALOG_BASE_URL:http://localhost:8081}
+
+    # ADR-0005: two timeouts, not the single "3 s" of specification §3.4.
+    #
+    # Catalog is one network hop away, so failing to connect within a second
+    # means it is not there; that is a different operational problem from a slow
+    # response, and collapsing them makes both look identical in the logs.
+    connect-timeout: PT1S
+    read-timeout: PT3S            # §3.4
+
+    retry:
+      # Read by a hand-written loop in CatalogRestClientAdapter, not by an
+      # annotation: proxy-based retry silently does nothing on a self-invocation,
+      # and spring-retry is not managed by the Spring Boot BOM (see the note in
+      # pom.xml). Spring Framework 7's @Retryable is the annotation alternative.
+      #
+      # Retry only timeouts and 5xx. Never a 409 — that is a definitive answer,
+      # and retrying it costs three round trips to hear the same "no".
+      #
+      # This is only safe because every /internal endpoint is idempotent
+      # (ADR-0003). Under the specification's original non-idempotent decrement, this
+      # retry is precisely the mechanism that double-decrements stock.
+      max-attempts: 2
+      backoff: PT0.2S
+
+logging:
+  level:
+    com.volt.order: INFO
+
+---
+# --------------------------------------------------------------------- docker
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+server:
+  forward-headers-strategy: framework
+
+---
+# ----------------------------------------------------------------------- test
+spring:
+  config:
+    activate:
+      on-profile: test
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+
+volt:
+  catalog:
+    # Overridden per test: use case tests use a hand-written fake implementing
+    # CatalogClientPort (no HTTP at all), and the adapter's own tests point this
+    # at MockRestServiceServer or WireMock. Never start a real catalog-service
+    # from order-service's test suite.
+    base-url: http://localhost:0
+
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN
