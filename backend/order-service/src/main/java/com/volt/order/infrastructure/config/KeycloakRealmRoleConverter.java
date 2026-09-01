@@ -14,16 +14,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Adapter between Keycloak's token format and Spring Security's role format.
- *
- * <p>Keycloak writes realm roles under {@code realm_access.roles}; Spring
+ * Keycloak writes realm roles under {@code realm_access.roles}; Spring
  * checks authorities named {@code ROLE_CLIENT}, {@code ROLE_ADMIN}, and so on.
- * This converter makes that translation and also keeps the token's standard
- * OAuth scope authorities.
- *
- * <p>The order service owns its copy because each microservice is independently
- * deployable. Sharing a tiny security adapter through a common library would
- * couple their releases for little benefit.
+ * Standard OAuth scope authorities are preserved.
  */
 @Component
 public final class KeycloakRealmRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {

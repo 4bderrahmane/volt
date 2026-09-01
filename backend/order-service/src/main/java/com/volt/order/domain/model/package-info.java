@@ -31,8 +31,8 @@
  *
  * <p>Rule of thumb: if it has an {@code id} column, it is a class.
  *
- * <p>This convention is documented rather than enforced by ArchUnit — see
- * ADR-0001 for why, and for the trade-off it costs.
+ * <p>This convention remains a review rule because ArchUnit cannot reliably
+ * infer entity or value-object intent from bytecode alone.
  *
  * <p><b>Lombok policy.</b> {@code @Getter} and {@code @ToString} are used here —
  * accessors are boilerplate and nothing is lost by generating them. {@code @Data},
@@ -40,7 +40,7 @@
  * {@code @AllArgsConstructor} and {@code @Builder} are rejected at compile time
  * by {@code ../lombok.config}: each of them would undo something on this page.
  * {@code @Data} alone reintroduces both value equality and public setters, which
- * is the record problem plus an encapsulation hole. See ADR-0008.
+ * is the record problem plus an encapsulation hole.
  *
  * <p>Note {@code @Getter(AccessLevel.NONE)} on the aggregate collections: a
  * generated accessor would hand out the live {@code ArrayList} and let any

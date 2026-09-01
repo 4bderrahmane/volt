@@ -36,13 +36,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * HTTP contract for {@code /api/v1/cart}, through the real filter chain.
- *
- * <p>The cart has no id in its URLs — every route resolves to the cart of the
- * JWT subject — so the tests that matter most are the ones asserting the
- * customer id reaching the use case came from the token.
- */
 @WebMvcTest(CartController.class)
 @Import({SecurityConfiguration.class, KeycloakRealmRoleConverter.class, GlobalExceptionHandler.class})
 class CartControllerTest {
@@ -65,11 +58,6 @@ class CartControllerTest {
         verifyNoInteractions(manageCart, viewCart);
     }
 
-    /**
-     * The chain grants {@code /api/v1/**} to ROLE_CLIENT. A valid token without
-     * that role is authenticated but not authorized, and must not fall through
-     * to the controller.
-     */
     @Test
     void aTokenWithoutTheClientRoleIsForbidden() throws Exception {
         mockMvc.perform(get("/api/v1/cart").with(jwt().jwt(token -> token.subject(CUSTOMER.toString()))))
@@ -175,11 +163,7 @@ class CartControllerTest {
         verifyNoInteractions(manageCart);
     }
 
-    /**
-     * Cart rendering asks the catalog for live prices, so it inherits the
-     * catalog's availability. A 503 keeps that distinguishable from an empty
-     * cart, which would otherwise look identical to the SPA.
-     */
+    /** A 503 distinguishes catalog failure from a legitimately empty cart. */
     @Test
     void anUnreachableCatalogWhileRenderingIsA503() throws Exception {
         when(viewCart.view(CUSTOMER)).thenThrow(new CatalogUnavailableException("catalog timed out", null));
@@ -188,8 +172,6 @@ class CartControllerTest {
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.type").value("https://volt.local/problems/catalog-unavailable"));
     }
-
-    // -------------------------------------------------------------- helpers
 
     private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor client() {
         return jwt().jwt(token -> token.subject(CUSTOMER.toString()))

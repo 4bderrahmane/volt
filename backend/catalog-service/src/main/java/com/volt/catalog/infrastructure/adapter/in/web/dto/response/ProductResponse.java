@@ -6,13 +6,6 @@ import com.volt.catalog.domain.model.Unit;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * HTTP response DTO returned to API clients.
- *
- * <p>It is a snapshot of the domain entity shaped for JSON. Returning this DTO
- * instead of {@code Product} prevents future HTTP changes from forcing changes
- * into the domain model.
- */
 public record ProductResponse(
         Long id,
         String reference,

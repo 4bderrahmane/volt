@@ -11,10 +11,6 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Confirms that order-service sees the roles embedded by the imported Keycloak
- * realm rather than silently treating every valid token as role-less.
- */
 class KeycloakRealmRoleConverterTest {
 
     private final KeycloakRealmRoleConverter converter = new KeycloakRealmRoleConverter();

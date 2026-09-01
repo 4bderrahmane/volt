@@ -70,13 +70,8 @@ public class PlaceOrderService implements PlaceOrderUseCase {
             throw failure;
         }
 
-        // Phase two of ADR-0003, delegated rather than inlined. The transition
-        // needs the order row locked before the confirm call, and this method
-        // cannot open that transaction itself: the CREATED order above must
-        // already be committed, so that a confirm failure leaves a durable
-        // order whose reservation the catalog can expire on its own. Routing
-        // through the status use case reuses the one locked, serialized
-        // transition path an administrator would take.
+        // The CREATED order must commit before confirmation; statusChanges owns
+        // the separate locking transaction.
         Order confirmed = statusChanges.changeStatus(created.getId(), OrderStatus.CONFIRMED);
         cart.clear(clock.instant());
         carts.save(cart);

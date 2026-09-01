@@ -1,5 +1,6 @@
 package com.volt.catalog.infrastructure.config;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,10 +22,6 @@ import java.util.Set;
  * makes authorization decisions using authorities such as {@code ROLE_ADMIN}.
  * This converter translates between those two vocabularies while preserving
  * normal OAuth scopes such as {@code SCOPE_openid}.
- *
- * <p>This class belongs in infrastructure because JWT claims and Spring
- * Security authorities are technical authentication details. The domain and
- * application layers do not need to know that Keycloak exists.
  */
 @Component
 public final class KeycloakRealmRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
@@ -35,7 +32,7 @@ public final class KeycloakRealmRoleConverter implements Converter<Jwt, Collecti
     private final JwtGrantedAuthoritiesConverter scopeConverter = new JwtGrantedAuthoritiesConverter();
 
     @Override
-    public Collection<GrantedAuthority> convert(Jwt jwt) {
+    public Collection<GrantedAuthority> convert(@NonNull Jwt jwt) {
         Set<GrantedAuthority> authorities = new LinkedHashSet<>();
 
         Collection<GrantedAuthority> scopeAuthorities = scopeConverter.convert(jwt);

@@ -5,7 +5,6 @@ import com.volt.order.domain.model.Cart;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Cart persistence (specification §5.2). */
 public interface CartRepositoryPort {
 
     Optional<Cart> findByCustomerId(UUID customerId);

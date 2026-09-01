@@ -1,6 +1,5 @@
 # =============================================================================
-# order-service — multi-stage build (technical specification §8)
-# Identical to catalog-service's; see that file for the rationale on each stage.
+# order-service — multi-stage build
 # =============================================================================
 
 FROM maven:3.9-eclipse-temurin-25 AS build

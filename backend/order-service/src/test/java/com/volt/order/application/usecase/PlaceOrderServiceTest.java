@@ -42,8 +42,7 @@ class PlaceOrderServiceTest {
         assertThat(carts.cart.isEmpty()).isTrue();
         assertThat(catalog.confirmedReservation).isEqualTo(55L);
         assertThat(orders.saves).isEqualTo(2);
-        // Checkout's own CREATED -> CONFIRMED step goes through the same
-        // pessimistic read an administrator's status change uses.
+        // Checkout confirmation uses the same locked transition path as administrators.
         assertThat(orders.locks).isEqualTo(1);
     }
 

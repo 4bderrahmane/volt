@@ -12,12 +12,9 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-/**
- * HTTP request DTO for editing the mutable part of a product.
- *
- * <p>The product reference is absent on purpose: the domain treats it as an
- * immutable business key, so the web API must not offer a way to change it.
- */
+
+// The product reference is absent on purpose: the domain treats it as an
+// immutable business key, so the web API must not offer a way to change it.
 public record UpdateProductRequest(
         @NotBlank @Size(max = 255) String label,
         String description,

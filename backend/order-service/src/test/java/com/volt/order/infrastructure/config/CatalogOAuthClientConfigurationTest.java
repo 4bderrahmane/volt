@@ -24,15 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Proves that the outgoing catalog HTTP client performs the complete OAuth2
- * client-credentials flow.
- *
- * <p>The small local server plays both Keycloak and catalog-service. This keeps
- * the test fast and deterministic while checking real HTTP behavior: a token is
- * requested, the bearer token is attached to catalog calls, and the cached
- * token is reused on the second call.
- */
+/** Uses one local server as both token issuer and catalog to exercise real HTTP behavior. */
 class CatalogOAuthClientConfigurationTest {
 
     private HttpServer server;

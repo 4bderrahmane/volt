@@ -20,14 +20,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Output adapter that implements the repository port with an in-memory map.
- *
- * <p>An output adapter connects an application need to a concrete technology.
- * The use cases only see {@code ProductRepositoryPort}; Spring injects this
- * implementation. Replacing it later with a JPA adapter will not change the
- * controller, use cases, domain entity, or their tests.
- */
 @Repository
 @Profile("memory")
 public class InMemoryProductRepositoryAdapter implements ProductRepositoryPort {

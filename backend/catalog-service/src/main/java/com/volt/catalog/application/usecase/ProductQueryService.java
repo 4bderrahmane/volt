@@ -14,13 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Application use-case implementation for reading products.
- *
- * <p>A use case coordinates one user intention. It depends on the incoming
- * {@code GetProductUseCase} contract and the outgoing {@code ProductRepositoryPort}
- * contract, while remaining unaware of controllers and storage technology.
- */
 @Service
 @Transactional(readOnly = true)
 public class ProductQueryService implements GetProductUseCase, SearchProductsUseCase {

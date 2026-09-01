@@ -47,16 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * HTTP contract for {@code /api/v1/orders}, driven through the real security
- * filter chain rather than a standalone controller.
- *
- * <p>Standalone MockMvc would exercise the mapping and the exception handler but
- * skip authentication entirely, so the role rules — the part most likely to be
- * wrong and most expensive when it is — would go untested. Every case below
- * therefore carries a JWT, and identity comes from its {@code sub} claim exactly
- * as it does in production.
- */
+/** Exercises order identity and role rules through the real security filter chain. */
 @WebMvcTest(OrderController.class)
 @Import({SecurityConfiguration.class, KeycloakRealmRoleConverter.class, GlobalExceptionHandler.class})
 class OrderControllerTest {
@@ -70,8 +61,6 @@ class OrderControllerTest {
     @MockitoBean private ViewOrdersUseCase viewOrders;
     @MockitoBean private ChangeOrderStatusUseCase changeStatus;
     @MockitoBean private JwtDecoder jwtDecoder;
-
-    // ------------------------------------------------------------- checkout
 
     @Test
     void checkoutReturns201WithALocationHeaderAndThePricedOrder() throws Exception {
@@ -99,10 +88,6 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.detail").value("Cannot place an order from an empty cart"));
     }
 
-    /**
-     * §13 requires the 409 to say which product ran out, so the shortage array
-     * is part of the contract, not diagnostic decoration.
-     */
     @Test
     void checkoutWithoutStockIsA409CarryingTheShortages() throws Exception {
         when(placeOrder.placeOrder(CUSTOMER))
@@ -127,8 +112,6 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.type").value("https://volt.local/problems/catalog-unavailable"));
     }
 
-    // -------------------------------------------------------------- reading
-
     @Test
     void historyIsScopedToTheAuthenticatedSubject() throws Exception {
         when(viewOrders.listForCustomer(CUSTOMER)).thenReturn(List.of(order(42L, OrderStatus.CONFIRMED, CUSTOMER)));
@@ -138,8 +121,6 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(42));
 
-        // The identity is read from the token, never from a parameter the
-        // caller controls.
         verify(viewOrders).listForCustomer(CUSTOMER);
     }
 
@@ -187,8 +168,6 @@ class OrderControllerTest {
 
         verifyNoInteractions(viewOrders);
     }
-
-    // ------------------------------------------------------- status changes
 
     @Test
     void statusChangesRequireAdminAndRejectClientsAndAnonymousCallers() throws Exception {
@@ -238,8 +217,6 @@ class OrderControllerTest {
 
         verifyNoInteractions(changeStatus);
     }
-
-    // -------------------------------------------------------------- helpers
 
     private static MockHttpServletRequestBuilder statusRequest(String body) {
         return patch("/api/v1/orders/42/status").contentType(MediaType.APPLICATION_JSON).content(body);

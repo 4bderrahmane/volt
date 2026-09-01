@@ -35,16 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Proves against PostgreSQL that the pessimistic read in
- * {@link com.volt.order.application.usecase.ChangeOrderStatusService} actually
- * serializes competing status changes.
- *
- * <p>Without the lock both tests below pass their assertions on status while
- * silently calling the catalog twice, which is exactly the stock/order mismatch
- * the lock exists to prevent — so the catalog call counts, not the statuses,
- * are what make this test worth running.
- */
+/** Catalog call counts expose locking failures that the final order status alone would miss. */
 @Import({TestcontainersConfiguration.class, OrderStatusConcurrencyIntegrationTest.SlowCountingCatalog.class})
 @SpringBootTest
 class OrderStatusConcurrencyIntegrationTest {
@@ -94,18 +85,10 @@ class OrderStatusConcurrencyIntegrationTest {
             OrderStatus survivor = winnerOf(cancelling, shipping);
             assertThat(survivor).isIn(OrderStatus.CANCELLED, OrderStatus.SHIPPED);
             assertThat(orders.findById(orderId).orElseThrow().getStatus()).isEqualTo(survivor);
-            // A shipped order must not have been restocked, and a cancelled one
-            // must have been restocked once. Never both, which is what an
-            // unlocked read would allow.
             assertThat(catalog.restocks.get()).isEqualTo(survivor == OrderStatus.CANCELLED ? 1 : 0);
         }
     }
 
-    /**
-     * The lock is only real while a transaction is open, so the adapter declares
-     * {@code Propagation.MANDATORY}. This asserts that guard is live rather than
-     * decorative.
-     */
     @Test
     void aPessimisticReadOutsideATransactionIsRefused() {
         long orderId = persistConfirmedOrder();
@@ -113,8 +96,6 @@ class OrderStatusConcurrencyIntegrationTest {
         assertThatThrownBy(() -> orders.findByIdForUpdate(orderId))
                 .isInstanceOf(IllegalTransactionStateException.class);
     }
-
-    // ------------------------------------------------------------------ helpers
 
     private long persistConfirmedOrder() {
         Instant now = Instant.now();
@@ -126,7 +107,6 @@ class OrderStatusConcurrencyIntegrationTest {
         return orders.save(saved).getId();
     }
 
-    /** Runs {@code action} on {@code threads} threads released together, returning whatever failed. */
     private static List<Throwable> race(int threads, ThrowingRunnable action) throws Exception {
         CountDownLatch ready = new CountDownLatch(threads);
         CountDownLatch go = new CountDownLatch(1);
@@ -182,12 +162,7 @@ class OrderStatusConcurrencyIntegrationTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class SlowCountingCatalog {
 
-        /**
-         * Deliberately slow. A catalog call that returns instantly would let the
-         * losing thread arrive after the winner has already committed, so the
-         * test would pass with or without the lock. The delay guarantees the
-         * second transaction reaches the row while the first still holds it.
-         */
+        /** Keeps the winning transaction open long enough for its competitor to reach the lock. */
         @Bean
         @Primary
         CountingCatalogClient countingCatalogClient() {

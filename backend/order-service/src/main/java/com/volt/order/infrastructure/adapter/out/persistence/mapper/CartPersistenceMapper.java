@@ -44,10 +44,7 @@ public class CartPersistenceMapper {
         }
         List<CartLineJpaEntity> replacement = new ArrayList<>();
         for (CartLine line : cart.getLines()) {
-            // The no-arg constructor is protected because it exists for Hibernate,
-            // not for application code. The builder is the entity's own public
-            // way to make a blank row, and it keeps that boundary intact now
-            // that the mapper lives in a sibling package.
+            // The no-arg constructor is reserved for Hibernate; the builder is public.
             CartLineJpaEntity mapped = line.getId() == null
                     ? CartLineJpaEntity.builder().build()
                     : existing.get(line.getId());

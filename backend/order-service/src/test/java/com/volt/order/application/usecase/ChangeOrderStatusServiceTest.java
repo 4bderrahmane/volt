@@ -66,11 +66,7 @@ class ChangeOrderStatusServiceTest {
         assertThat(result.getReservationId()).isNull();
     }
 
-    /**
-     * The ordering assertion is the point of the pessimistic read. A catalog
-     * side effect issued before the row is held is a side effect issued against
-     * a status another transaction may already have changed.
-     */
+    /** The row lock must precede external side effects so they use the serialized status. */
     @Test
     void locksTheOrderRowBeforeAnyCatalogSideEffect() {
         FakeOrders orders = new FakeOrders(order(OrderStatus.CONFIRMED, null));

@@ -61,21 +61,9 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, "Invalid value", "invalid-value", exception.getMessage());
     }
 
-    /**
-     * Constraints on path variables — the {@code @Positive} ids — are checked by
-     * the {@code @Validated} proxy, which raises this rather than
-     * {@link MethodArgumentNotValidException}. Without a handler it escapes as a
-     * 500, so {@code GET /api/v1/orders/0} reported a server fault for what is
-     * plainly a bad request.
-     *
-     * <p>The violation message is not echoed back: it is phrased in terms of the
-     * Java method and parameter that failed, which tells a caller nothing useful
-     * and describes internals.
-     */
     @ExceptionHandler(ConstraintViolationException.class)
     ProblemDetail invalidConstraint(ConstraintViolationException exception) {
-        return problem(HttpStatus.BAD_REQUEST, "Invalid value", "invalid-value",
-                "One or more request parameters are invalid");
+        return problem(HttpStatus.BAD_REQUEST, "Invalid value", "invalid-value", "One or more request parameters are invalid");
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, String type, String detail) {

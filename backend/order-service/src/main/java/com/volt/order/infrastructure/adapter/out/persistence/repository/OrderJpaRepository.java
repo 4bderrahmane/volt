@@ -18,14 +18,11 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, Long> 
     Optional<OrderJpaEntity> findById(Long id);
 
     /**
-     * Deliberately without {@code @EntityGraph}: joining {@code order_line}
-     * here would emit {@code FOR UPDATE} against the nullable side of an outer
-     * join, which PostgreSQL rejects outright. The lock belongs on the
-     * aggregate root row alone; lines are loaded lazily inside the same
-     * transaction, which is where the mapper reads them.
+     * No {@code @EntityGraph}: PostgreSQL rejects {@code FOR UPDATE} on the
+     * nullable side of the resulting outer join. Lock only the aggregate root.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select orderEntity from OrderJpaEntity orderEntity where orderEntity.id = :id")
+    @Query("SELECT orderEntity FROM OrderJpaEntity orderEntity WHERE orderEntity.id = :id")
     Optional<OrderJpaEntity> lockById(@Param("id") long id);
 
     @EntityGraph(attributePaths = "lines")

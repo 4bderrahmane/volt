@@ -13,13 +13,6 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-/**
- * HTTP request DTO for creating a product.
- *
- * <p>A DTO describes the external JSON contract and performs boundary-level
- * validation. It is intentionally separate from {@code Product}, because HTTP
- * input format and domain behaviour have different reasons to change.
- */
 public record CreateProductRequest(
         @NotBlank @Size(max = 64) String reference,
         @NotBlank @Size(max = 255) String label,

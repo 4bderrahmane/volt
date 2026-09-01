@@ -19,15 +19,6 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.time.Duration;
 
-/**
- * Configures order-service as an OAuth2 machine client of catalog-service.
- *
- * <p>This is the opposite direction from {@link SecurityConfiguration}:
- * {@code SecurityConfiguration} validates tokens arriving at order-service,
- * while this class obtains a client-credentials token and adds it to outgoing
- * catalog requests. Keycloak identifies that token as the {@code volt-order}
- * client and grants it the SERVICE realm role.
- */
 @Configuration
 public class CatalogOAuthClientConfiguration {
 
@@ -37,11 +28,6 @@ public class CatalogOAuthClientConfiguration {
             "order-service",
             AuthorityUtils.createAuthorityList("ROLE_SERVICE"));
 
-    /**
-     * Coordinates token acquisition, reuse, and renewal for client credentials.
-     * Spring stores the authorized client so it does not ask Keycloak for a new
-     * token before every catalog request.
-     */
     @Bean
     OAuth2AuthorizedClientManager catalogAuthorizedClientManager(
             ClientRegistrationRepository registrations,
@@ -56,15 +42,7 @@ public class CatalogOAuthClientConfiguration {
         return manager;
     }
 
-    /**
-     * HTTP client reserved for the future catalog output adapter.
-     *
-     * <p>The interceptor obtains a {@code volt-order} token before a request,
-     * sends it as {@code Authorization: Bearer ...}, and discards a cached token
-     * after a 401 or 403 so the next call can obtain a fresh one. A fixed service
-     * principal prevents tokens from being cached once per currently logged-in
-     * browser user.
-     */
+    /** Uses one fixed service principal so tokens are not cached per browser user. */
     @Bean
     @Qualifier("catalogRestClient")
     RestClient catalogRestClient(

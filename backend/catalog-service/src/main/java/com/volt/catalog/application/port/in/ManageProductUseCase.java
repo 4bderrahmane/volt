@@ -5,12 +5,6 @@ import com.volt.catalog.domain.model.Unit;
 
 import java.math.BigDecimal;
 
-/**
- * Incoming port describing the product-changing operations offered by the core.
- *
- * <p>The nested command records contain application input, not HTTP details.
- * A controller maps request DTOs into these commands before calling the port.
- */
 public interface ManageProductUseCase {
 
     Product create(CreateProductCommand command);
