@@ -9,6 +9,7 @@ import com.volt.catalog.infrastructure.adapter.out.persistence.repository.Produc
 import com.volt.catalog.infrastructure.adapter.out.persistence.repository.ReservationJpaRepository;
 import com.volt.catalog.infrastructure.adapter.out.persistence.repository.ReservationLineJpaRepository;
 import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@RequiredArgsConstructor
 @Repository
 public class ReservationPersistenceAdapter implements ReservationRepositoryPort {
 
@@ -26,24 +28,10 @@ public class ReservationPersistenceAdapter implements ReservationRepositoryPort 
     private final ReservationPersistenceMapper mapper;
     private final EntityManager entityManager;
 
-    public ReservationPersistenceAdapter(
-            ReservationJpaRepository reservations,
-            ReservationLineJpaRepository lines,
-            ProductJpaRepository products,
-            ReservationPersistenceMapper mapper,
-            EntityManager entityManager) {
-        this.reservations = reservations;
-        this.lines = lines;
-        this.products = products;
-        this.mapper = mapper;
-        this.entityManager = entityManager;
-    }
-
     @Override
     public void lockOrderRef(String orderRef) {
         entityManager.createNativeQuery(
-                        "select 1 from (select pg_advisory_xact_lock(" +
-                                "hashtextextended(cast(:orderRef as text), 0))) held")
+                        "SELECT 1 FROM (SELECT pg_advisory_xact_lock(" + "hashtextextended(CAST(:orderRef AS TEXT), 0))) held")
                 .setParameter("orderRef", orderRef)
                 .getSingleResult();
     }

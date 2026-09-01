@@ -6,27 +6,20 @@ import com.volt.catalog.domain.model.Category;
 import com.volt.catalog.infrastructure.adapter.out.persistence.mapper.ReferenceDataPersistenceMapper;
 import com.volt.catalog.infrastructure.adapter.out.persistence.repository.BrandJpaRepository;
 import com.volt.catalog.infrastructure.adapter.out.persistence.repository.CategoryJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
+@RequiredArgsConstructor
 @Repository
 public class ReferenceDataPersistenceAdapter implements ReferenceDataRepositoryPort {
 
     private final CategoryJpaRepository categories;
     private final BrandJpaRepository brands;
     private final ReferenceDataPersistenceMapper mapper;
-
-    public ReferenceDataPersistenceAdapter(
-            CategoryJpaRepository categories,
-            BrandJpaRepository brands,
-            ReferenceDataPersistenceMapper mapper) {
-        this.categories = categories;
-        this.brands = brands;
-        this.mapper = mapper;
-    }
 
     @Override
     public List<Category> findAllCategories() {
