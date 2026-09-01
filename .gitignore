@@ -1,8 +1,23 @@
+# build output
 target/
 node_modules/
 dist/
+build/
+
+# secrets and local config (cahier §8, §13)
 .env
-*.log
+*.p12
+*.jks
+*.pem
+
+# IDE and local tooling
 .idea/
+*.iml
 .vscode/
+.claude/
+
+# OS
 .DS_Store
+
+# logs
+*.log
