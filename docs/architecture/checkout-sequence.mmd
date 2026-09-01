@@ -1,0 +1,66 @@
+---
+title: "Checkout — reservation protocol (ADR-0003, supersedes specification §3.4)"
+---
+sequenceDiagram
+    autonumber
+    actor C as Client
+    participant S as SPA
+    participant O as order-service
+    participant K as Keycloak
+    participant CAT as catalog-service
+    participant DBO as db_order
+    participant DBC as db_catalog
+
+    C->>S: "Confirm order"
+    S->>O: POST /api/v1/orders<br/>Bearer <user token>
+    O->>O: customerId = jwt.sub<br/>(never from the request body)
+
+    rect rgb(238, 246, 255)
+        Note over O,DBC: PHASE 1 — reserve.<br/>One call returns availability AND the authoritative prices,<br/>so the price persisted below is the one that was validated.
+        O->>K: client_credentials grant
+        K-->>O: machine token (role SERVICE)
+        O->>CAT: POST /internal/v1/stock/reservations<br/>{ orderRef, lines[] }
+        CAT->>DBC: BEGIN
+        CAT->>DBC: SELECT ... FOR UPDATE on the products
+        CAT->>DBC: available = stock_quantity − active reservations
+        alt any line short
+            CAT->>DBC: ROLLBACK — all-or-nothing, nothing is held
+            CAT-->>O: 409 problem+json<br/>{ type: insufficient-stock, shortages[] }
+            O-->>S: 409 naming the product that ran out
+            S-->>C: "Insufficient stock: MOD-SPD-T2 (3 remaining)"
+        else all lines available
+            CAT->>DBC: INSERT reservation + lines<br/>expires_at = now + 15 min
+            CAT->>DBC: COMMIT
+            CAT-->>O: 201 { reservationId, expiresAt,<br/>lines[{ reference, label, unitPriceExclVat }] }
+        end
+    end
+
+    rect rgb(240, 253, 244)
+        Note over O,DBO: PHASE 2 — persist locally.<br/>If this fails, do NOTHING. No compensating call: a compensation<br/>issued by a process that may have just died is not a recovery<br/>mechanism. The reservation expires on its own.
+        O->>DBO: BEGIN
+        O->>DBO: INSERT orders (status = CREATED,<br/>reservation_id, total_excl_vat,<br/>vat_amount, total_incl_vat)
+        O->>DBO: INSERT lines — price COPIED, not referenced (§3.3)
+        O->>DBO: COMMIT
+    end
+
+    rect rgb(255, 247, 237)
+        Note over O,DBC: PHASE 3 — confirm. Idempotent:<br/>the reservation row is a single-use token.
+        O->>CAT: POST /internal/v1/stock/reservations/{id}/confirm
+        CAT->>DBC: BEGIN
+        CAT->>DBC: stock_quantity -= quantity
+        CAT->>DBC: reservation.status = CONFIRMED
+        CAT->>DBC: COMMIT
+        CAT-->>O: 200
+        O->>DBO: orders.status = CONFIRMED
+    end
+
+    O-->>S: 201 Created + Location: /api/v1/orders/{id}
+    S-->>C: Order confirmation
+
+    rect rgb(254, 242, 242)
+        Note over CAT,DBC: RECOVERY — the property that makes this correct.<br/>Every repair runs inside catalog, as a local transaction, on the<br/>database that owns the stock. Nothing has to survive a crash.
+        loop @Scheduled every 60 s
+            CAT->>DBC: UPDATE reservation SET status = 'EXPIRED'<br/>WHERE status = 'ACTIVE' AND expires_at < now()
+        end
+        Note over O: An order stuck at CREATED whose reservation expired<br/>is reconciled to CANCELLED. No stock was ever lost.
+    end

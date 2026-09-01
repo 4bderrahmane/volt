@@ -1,0 +1,88 @@
+---
+title: "volt — C4 level 2 (containers)"
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    classDef person    fill:#0b4f6c,stroke:#083a4f,color:#ffffff
+    classDef container fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef store     fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef external  fill:#6c757d,stroke:#495057,color:#ffffff
+    classDef boundary  fill:#f6f8fa,stroke:#8b949e,color:#24292f,stroke-dasharray:4 4
+
+    client["<b>Professional Customer</b>
+    <i>[Person — role CLIENT]</i>
+    Browses, fills a cart, orders"]:::person
+
+    admin["<b>Administrator</b>
+    <i>[Person — role ADMIN]</i>
+    Product CRUD, order status"]:::person
+
+    subgraph volt["volt — B2B mini e-commerce platform"]
+        direction TB
+
+        spa["<b>Single-Page Application</b>
+        <i>[React 19 · Vite · nginx :4200]</i>
+        Catalog, detail, cart, orders, admin.
+        Reverse-proxies both APIs, so the
+        browser sees one origin and there
+        is no CORS to configure."]:::container
+
+        catalog["<b>catalog-service</b>
+        <i>[Spring Boot 4 · Java 25 · :8081]</i>
+        Source of truth for products,
+        prices, stock and reservations.
+        Hexagonal: domain / application /
+        infrastructure"]:::container
+
+        order["<b>order-service</b>
+        <i>[Spring Boot 4 · Java 25 · :8082]</i>
+        Carts and orders. Copies price and
+        label onto order lines at checkout,
+        so a past order never changes.
+        Hexagonal: same layout"]:::container
+
+        keycloak["<b>Keycloak</b>
+        <i>[OIDC issuer · :8080]</i>
+        Realm volt · roles CLIENT, ADMIN,
+        SERVICE. Issues user tokens and the
+        machine token order-service uses
+        for /internal/**
+        <i>ADR-0004 — absent from specification §3.1</i>"]:::external
+
+        dbcat[("<b>db_catalog</b>
+        <i>[PostgreSQL 18 · :5433]</i>
+        category · brand · product
+        reservation · reservation_line")]:::store
+
+        dbord[("<b>db_order</b>
+        <i>[PostgreSQL 18 · :5434]</i>
+        cart · cart_line
+        orders · order_line")]:::store
+    end
+
+    client -->|HTTPS| spa
+    admin  -->|HTTPS| spa
+
+    client -.->|"Auth code + PKCE"| keycloak
+    admin  -.->|"Auth code + PKCE"| keycloak
+
+    spa -->|"JSON/HTTPS
+    /api/catalog/** (proxied)"| catalog
+    spa -->|"JSON/HTTPS
+    /api/orders/** (proxied)"| order
+
+    order ==>|"<b>/internal/v1/stock/**</b>
+    reserve → confirm · TTL 15 min
+    Bearer: client-credentials token
+    <i>ADR-0003 · ADR-0005</i>"| catalog
+
+    catalog -->|JDBC| dbcat
+    order   -->|JDBC| dbord
+
+    catalog -.->|"Validates JWT via JWKS"| keycloak
+    order   -.->|"Validates JWT ·
+    obtains machine token"| keycloak
+
+    class volt boundary
