@@ -9,6 +9,7 @@ import com.volt.order.infrastructure.adapter.in.web.dto.response.OrderResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -40,22 +41,26 @@ public class OrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<OrderResponse> place(@AuthenticationPrincipal Jwt jwt) {
         Order order = placeOrder.placeOrder(customer(jwt));
         return ResponseEntity.created(URI.create("/api/v1/orders/" + order.getId())).body(OrderResponse.from(order));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('CLIENT')")
     public List<OrderResponse> list(@AuthenticationPrincipal Jwt jwt) {
         return viewOrders.listForCustomer(customer(jwt)).stream().map(OrderResponse::from).toList();
     }
 
     @GetMapping("/{orderId}")
+    @PreAuthorize("hasRole('CLIENT')")
     public OrderResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable @Positive long orderId) {
         return OrderResponse.from(viewOrders.getForCustomer(customer(jwt), orderId));
     }
 
     @PatchMapping("/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public OrderResponse changeStatus(@PathVariable @Positive long orderId,
                                       @Valid @RequestBody ChangeOrderStatusRequest request) {
         return OrderResponse.from(changeStatus.changeStatus(orderId, request.status()));
