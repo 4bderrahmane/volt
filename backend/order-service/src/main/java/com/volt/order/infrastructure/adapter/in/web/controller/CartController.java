@@ -7,7 +7,9 @@ import com.volt.order.infrastructure.adapter.in.web.dto.request.UpdateCartLineRe
 import com.volt.order.infrastructure.adapter.in.web.dto.response.CartResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -24,15 +26,12 @@ import java.util.UUID;
 
 @Validated
 @RestController
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('CLIENT')")
 @RequestMapping("/api/v1/cart")
 public class CartController {
     private final ManageCartUseCase manageCart;
     private final ViewCartUseCase viewCart;
-
-    public CartController(ManageCartUseCase manageCart, ViewCartUseCase viewCart) {
-        this.manageCart = manageCart;
-        this.viewCart = viewCart;
-    }
 
     @GetMapping
     public CartResponse view(@AuthenticationPrincipal Jwt jwt) {
