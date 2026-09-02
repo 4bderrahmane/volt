@@ -13,6 +13,7 @@ import com.volt.catalog.infrastructure.adapter.out.persistence.repository.BrandJ
 import com.volt.catalog.infrastructure.adapter.out.persistence.repository.CategoryJpaRepository;
 import com.volt.catalog.infrastructure.adapter.out.persistence.repository.ProductJpaRepository;
 import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,23 +27,13 @@ import java.util.Locale;
 import java.util.Optional;
 
 @Repository
+@RequiredArgsConstructor
 public class ProductPersistenceAdapter implements ProductRepositoryPort {
 
     private final ProductJpaRepository products;
     private final CategoryJpaRepository categories;
     private final BrandJpaRepository brands;
     private final ProductPersistenceMapper mapper;
-
-    public ProductPersistenceAdapter(
-            ProductJpaRepository products,
-            CategoryJpaRepository categories,
-            BrandJpaRepository brands,
-            ProductPersistenceMapper mapper) {
-        this.products = products;
-        this.categories = categories;
-        this.brands = brands;
-        this.mapper = mapper;
-    }
 
     @Override
     public Optional<Product> findById(long productId) {

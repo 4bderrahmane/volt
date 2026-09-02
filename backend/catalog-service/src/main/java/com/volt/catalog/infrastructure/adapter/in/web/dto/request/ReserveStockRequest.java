@@ -10,9 +10,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-public record ReserveStockRequest(
-        @NotBlank @Size(max = 64) String orderRef,
-        @NotEmpty List<@Valid RequestedLine> lines) {
+public record ReserveStockRequest(@NotBlank @Size(max = 64) String orderRef, @NotEmpty List<@Valid RequestedLine> lines) {
 
     public ReserveStockUseCase.ReserveStockCommand toCommand() {
         return new ReserveStockUseCase.ReserveStockCommand(

@@ -5,6 +5,7 @@ import com.volt.order.domain.model.Order;
 import com.volt.order.infrastructure.adapter.out.persistence.entity.OrderJpaEntity;
 import com.volt.order.infrastructure.adapter.out.persistence.mapper.OrderPersistenceMapper;
 import com.volt.order.infrastructure.adapter.out.persistence.repository.OrderJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,14 +15,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@RequiredArgsConstructor
 public class OrderPersistenceAdapter implements OrderRepositoryPort {
     private final OrderJpaRepository repository;
     private final OrderPersistenceMapper mapper;
-
-    public OrderPersistenceAdapter(OrderJpaRepository repository, OrderPersistenceMapper mapper) {
-        this.repository = repository;
-        this.mapper = mapper;
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -29,13 +26,7 @@ public class OrderPersistenceAdapter implements OrderRepositoryPort {
         return repository.findById(orderId).map(mapper::toDomain);
     }
 
-    /**
-     * {@code MANDATORY} on purpose. A row lock taken in its own transaction is
-     * released the instant this method returns, so the caller would hold
-     * nothing while still believing it had exclusive access — the most
-     * expensive kind of no-op. Requiring an inherited transaction turns that
-     * mistake into a startup-time failure instead of a race in production.
-     */
+    // Refuses calls without a surrounding transaction so the row lock cannot escape early.
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public Optional<Order> findByIdForUpdate(long orderId) {
