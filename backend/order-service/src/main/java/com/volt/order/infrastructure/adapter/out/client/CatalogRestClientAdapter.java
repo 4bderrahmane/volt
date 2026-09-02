@@ -5,7 +5,11 @@ import com.volt.order.application.port.out.CatalogClientPort;
 import com.volt.order.domain.exception.CatalogUnavailableException;
 import com.volt.order.domain.exception.InsufficientStockException;
 import com.volt.order.domain.model.ProductSnapshot;
-import com.volt.order.domain.model.StockShortage;
+import com.volt.order.infrastructure.adapter.out.client.dto.request.ReservationRequest;
+import com.volt.order.infrastructure.adapter.out.client.dto.request.RestockRequest;
+import com.volt.order.infrastructure.adapter.out.client.dto.response.ProductResponse;
+import com.volt.order.infrastructure.adapter.out.client.dto.response.ReservationResponse;
+import com.volt.order.infrastructure.adapter.out.client.dto.response.ShortageProblem;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -14,9 +18,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
@@ -33,7 +35,11 @@ public class CatalogRestClientAdapter implements CatalogClientPort {
             ObjectMapper objectMapper,
             @Value("${volt.catalog.retry.max-attempts:2}") int maxAttempts,
             @Value("${volt.catalog.retry.backoff:PT0.2S}") Duration backoff) {
-        if (maxAttempts < 1) throw new IllegalArgumentException("catalog max attempts must be positive");
+
+        if (maxAttempts < 1) {
+            throw new IllegalArgumentException("catalog max attempts must be positive");
+        }
+
         this.client = client;
         this.objectMapper = objectMapper;
         this.maxAttempts = maxAttempts;
@@ -136,12 +142,4 @@ public class CatalogRestClientAdapter implements CatalogClientPort {
         return new CatalogUnavailableException(message, cause);
     }
 
-    private record ReservationRequest(String orderRef, List<RequestedLine> lines) { }
-    private record RestockRequest(String orderRef) { }
-    private record ReservationResponse(Long reservationId, Instant expiresAt, List<ReservedLineResponse> lines) { }
-    private record ReservedLineResponse(Long productId, String reference, String label,
-                                        BigDecimal unitPriceExclVat, int quantity) { }
-    private record ProductResponse(Long id, String reference, String label, BigDecimal priceExclVat,
-                                   int stockQuantity, boolean active) { }
-    private record ShortageProblem(List<StockShortage> shortages) { }
 }
