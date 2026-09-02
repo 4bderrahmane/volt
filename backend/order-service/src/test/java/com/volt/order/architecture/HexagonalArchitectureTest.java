@@ -9,18 +9,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
-/**
- * Executable form of technical specification §4 and ADR-0001.
- *
- * <p>§9 makes a passing architecture test an acceptance criterion, and §13
- * repeats it. The rules below are what "compliance with hexagonal architecture"
- * actually means in code — a layout that is only a folder convention decays
- * within a fortnight, because every violation individually looks reasonable at
- * the moment you write it.
- *
- * <p>Rules 1 and 5 of §4 are mandatory. The rest are enforced here because each
- * one is a mistake that is easy to make and expensive to unwind later.
- */
+/** Enforces the service's hexagonal architecture boundaries. */
 @AnalyzeClasses(
         packages = "com.volt.order",
         importOptions = ImportOption.DoNotIncludeTests.class)
@@ -30,28 +19,8 @@ class HexagonalArchitectureTest {
     private static final String APPLICATION = "..order.application..";
     private static final String INFRASTRUCTURE = "..order.infrastructure..";
 
-    // ------------------------------------------------------------------ §4.1
-
-    /**
-     * §4 rule 1, and §13's acceptance criterion: the ArchUnit test verifying
-     * the absence of framework dependencies in domain passes.
-     *
-     * <p>The point is not purity for its own sake: a domain with no framework on
-     * its classpath can be unit-tested without starting a Spring context, which
-     * is what makes §9's 70% coverage target reachable at all. A domain that
-     * needs {@code @SpringBootTest} to test gets tested rarely.
-     *
-     * <p>{@code jakarta..} is banned here and nowhere else. It is required in
-     * {@code adapter.out.persistence} (JPA entities) and on the request DTOs in
-     * {@code adapter.in.web}, where §6.3 explicitly mandates it. Adding it to a
-     * domain model turns this test red, which turns a §13 checkbox red.
-     *
-     * <p>It also buys nothing: a {@code @NotNull} on a domain field does exactly
-     * nothing unless something invokes a {@code Validator}, and nothing does for
-     * domain objects. The constructor guards already present — {@code quantity
-     * < 1} throws — fire unconditionally. Bean validation belongs at the
-     * boundary, where a framework is actually running.
-     */
+    // Lombok restrictions live in domain/lombok.config because SOURCE-retained
+    // annotations are absent from the bytecode ArchUnit inspects.
     @ArchTest
     static final ArchRule domain_is_free_of_frameworks = noClasses()
             .that().resideInAPackage(DOMAIN)
@@ -63,31 +32,9 @@ class HexagonalArchitectureTest {
                     "org.hibernate..",
                     "io.swagger..",
                     "org.flywaydb..")
-            .because("specification §4 rule 1: the domain must compile and be tested with no framework present");
+            .because("the domain must compile and be tested with no framework present");
 
-    /*
-     * Deliberately absent: a rule banning "lombok..".
-     *
-     * Lombok's annotations are RetentionPolicy.SOURCE — erased by the compiler,
-     * never written to a .class file. ArchUnit reads bytecode, so such a rule
-     * compiles, runs, passes, and guards nothing whatsoever. It is worse than no
-     * rule at all, because it reads like protection.
-     *
-     * The domain's Lombok policy (@Getter and @ToString permitted; @Data,
-     * @Value, @Setter, @EqualsAndHashCode, @AllArgsConstructor and @Builder
-     * rejected) is enforced instead by domain/lombok.config, which runs inside
-     * the compiler where the annotations still exist. See ADR-0008.
-     */
-
-    /**
-     * The same rule for the application layer, minus the two Spring annotations
-     * it genuinely needs. Allowing {@code @Service} and {@code @Transactional}
-     * is a pragmatic concession, not an oversight: transaction demarcation is
-     * genuinely an application-layer concern, and the alternative — a
-     * hand-rolled transaction port — buys nothing on a project this size.
-     * Anything else from Spring in this layer is infrastructure that has crept
-     * inward.
-     */
+    // @Service and @Transactional are deliberate application-layer exceptions.
     @ArchTest
     static final ArchRule application_uses_only_transactional_spring = noClasses()
             .that().resideInAPackage(APPLICATION)
@@ -101,13 +48,6 @@ class HexagonalArchitectureTest {
             .because("web, HTTP, persistence and security are adapter concerns; "
                     + "returning a Spring Data Page from an out-port is the usual way this breaks");
 
-    // ------------------------------------------------------------------ §4.5
-
-    /**
-     * §4 rule 5: dependencies point inward only. This is the rule that makes
-     * every other one enforceable — once infrastructure can be referenced from
-     * application, nothing else holds.
-     */
     @ArchTest
     static final ArchRule dependencies_point_inward = layeredArchitecture()
             .consideringOnlyDependenciesInLayers()
@@ -117,7 +57,7 @@ class HexagonalArchitectureTest {
             .whereLayer("Infrastructure").mayNotBeAccessedByAnyLayer()
             .whereLayer("Application").mayOnlyBeAccessedByLayers("Infrastructure")
             .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Infrastructure")
-            .because("specification §4 rule 5: infrastructure -> application -> domain");
+            .because("dependencies point inward: infrastructure -> application -> domain");
 
     @ArchTest
     static final ArchRule domain_depends_on_nothing_internal = noClasses()
@@ -125,20 +65,12 @@ class HexagonalArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage(APPLICATION, INFRASTRUCTURE)
             .because("the domain is the innermost layer and knows about nothing else");
 
-    // ------------------------------------------------------------------ §4.3
-
-    /**
-     * §4 rule 3: use cases depend on interfaces, never on implementations. A
-     * port that is accidentally declared as a class still compiles and still
-     * looks like hexagonal architecture in the folder tree, which is why this
-     * is worth checking mechanically.
-     */
     @ArchTest
     static final ArchRule ports_are_interfaces = classes()
             .that().resideInAPackage("..application.port..")
             .and().areTopLevelClasses()
             .should().beInterfaces()
-            .because("specification §4 rule 3: a port is a contract, not an implementation");
+            .because("a port is a contract, not an implementation");
 
     @ArchTest
     static final ArchRule in_ports_are_named_use_cases = classes()
@@ -156,20 +88,11 @@ class HexagonalArchitectureTest {
             .should().haveSimpleNameEndingWith("Port")
             .because("a driven port declares a need; the name should not mention the technology");
 
-    // ------------------------------------------------------------------ §4.2
-
-    /**
-     * §4 rule 2: JPA entities are distinct from domain models. Confining
-     * {@code jakarta.persistence} to one package is what forces that split to
-     * stay real — the moment an entity can be annotated anywhere, the domain
-     * model and the table schema quietly become the same object and every JPA
-     * constraint becomes a business rule by accident.
-     */
     @ArchTest
     static final ArchRule jpa_lives_only_in_the_persistence_adapter = noClasses()
             .that().resideOutsideOfPackage("..infrastructure.adapter.out.persistence..")
             .should().dependOnClassesThat().resideInAnyPackage("jakarta.persistence..")
-            .because("specification §4 rule 2: JPA entities are separate from domain models");
+            .because("JPA entities are separate from domain models");
 
     @ArchTest
     static final ArchRule jpa_entities_are_named_consistently = classes()
@@ -177,8 +100,6 @@ class HexagonalArchitectureTest {
             .should().haveSimpleNameEndingWith("JpaEntity")
             .andShould().resideInAPackage("..infrastructure.adapter.out.persistence.entity..")
             .because("the *JpaEntity suffix keeps the distinction from domain models visible at a glance");
-
-    // ------------------------------------------------------- adapter placement
 
     @ArchTest
     static final ArchRule controllers_live_in_the_web_adapter = classes()
@@ -190,23 +111,6 @@ class HexagonalArchitectureTest {
     static final ArchRule spring_data_repositories_live_in_the_persistence_adapter = classes()
             .that().haveSimpleNameEndingWith("JpaRepository")
             .should().resideInAPackage("..infrastructure.adapter.out.persistence.repository..");
-
-    // --------------------------------------------------- adapter package layout
-
-    /*
-     * The rules below pin the internal shape of the two adapters. Both packages
-     * were once a single flat directory holding controllers, request DTOs,
-     * response DTOs and the exception handler side by side, which is readable at
-     * six files and unreadable at sixteen. Grouping alone would drift back within
-     * a month, because every individual file is easier to drop next to its
-     * neighbour than to file correctly — so the grouping is asserted here rather
-     * than described in a wiki page.
-     *
-     * Note that all of these packages remain inside `adapter.in.web` and
-     * `adapter.out.persistence`. That is deliberate: the hexagonal rules above
-     * are written against those prefixes, so organising within them buys
-     * readability without loosening a single boundary.
-     */
 
     @ArchTest
     static final ArchRule request_dtos_live_in_the_request_package = classes()
@@ -235,35 +139,19 @@ class HexagonalArchitectureTest {
     static final ArchRule persistence_mappers_live_in_the_mapper_package = classes()
             .that().haveSimpleNameEndingWith("PersistenceMapper")
             .should().resideInAPackage("..infrastructure.adapter.out.persistence.mapper..")
-            .because("entity/domain translation is the seam specification §4 rule 2 rests on");
+            .because("entity/domain translation keeps persistence and domain models separate");
 
-    /**
-     * The web adapter must not touch JPA entities.
-     *
-     * <p>Serialising an entity straight out of a controller is the single most
-     * common way the DTO layer stops meaning anything: it works, it is shorter,
-     * and it silently republishes the table schema as the API contract. The
-     * split into {@code dto.response} and {@code persistence.entity} only holds
-     * while nothing bridges the two.
-     */
     @ArchTest
     static final ArchRule web_adapter_does_not_touch_jpa_entities = noClasses()
             .that().resideInAPackage("..infrastructure.adapter.in.web..")
             .should().dependOnClassesThat().resideInAPackage("..infrastructure.adapter.out.persistence..")
             .because("controllers return response DTOs built from domain models, never persistence entities");
 
-    /**
-     * The web layer talks to in-ports, never to use case implementations.
-     * Without this the interfaces still exist but nothing uses them, and the
-     * indirection becomes decoration.
-     */
     @ArchTest
     static final ArchRule web_adapter_does_not_reach_into_usecases = noClasses()
             .that().resideInAPackage("..infrastructure.adapter.in.web..")
             .should().dependOnClassesThat().resideInAPackage("..application.usecase..")
             .because("controllers depend on port.in interfaces, not on their implementations");
-
-    // ------------------------------------------------------------------ hygiene
 
     @ArchTest
     static final ArchRule no_field_injection = noClasses()

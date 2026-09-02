@@ -1,7 +1,3 @@
-# =============================================================================
-# order-service
-# =============================================================================
-
 spring:
   application:
     name: order-service
@@ -13,7 +9,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate      # ADR-0006 — Flyway owns the schema in every profile
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
@@ -39,7 +35,7 @@ spring:
           jwk-set-uri: ${VOLT_KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/volt/protocol/openid-connect/certs}
           audiences: volt-api
 
-      # Machine identity for calling catalog's /internal/v1/stock/** (ADR-0004).
+      # Machine identity for calling catalog's internal stock endpoints.
       # The client-credentials grant gives this service an identity of its own,
       # separate from whichever user happens to be checking out — which is what
       # lets catalog require ROLE_SERVICE there and keep the endpoints
@@ -53,12 +49,13 @@ spring:
         provider:
           catalog:
             token-uri: ${VOLT_CATALOG_TOKEN_URI:http://localhost:8080/realms/volt/protocol/openid-connect/token}
+  web:
+    error:
+      include-stacktrace: never
+      include-message: never
 
 server:
   port: 8082
-  error:
-    include-stacktrace: never
-    include-message: never
 
 management:
   endpoints:
@@ -79,26 +76,22 @@ volt:
   catalog:
     base-url: ${VOLT_CATALOG_BASE_URL:http://localhost:8081}
 
-    # ADR-0005: two timeouts, not the single "3 s" of specification §3.4.
-    #
     # Catalog is one network hop away, so failing to connect within a second
     # means it is not there; that is a different operational problem from a slow
     # response, and collapsing them makes both look identical in the logs.
     connect-timeout: PT1S
-    read-timeout: PT3S            # §3.4
+    read-timeout: PT3S
 
     retry:
       # Read by a hand-written loop in CatalogRestClientAdapter, not by an
       # annotation: proxy-based retry silently does nothing on a self-invocation,
-      # and spring-retry is not managed by the Spring Boot BOM (see the note in
-      # pom.xml). Spring Framework 7's @Retryable is the annotation alternative.
+      # and spring-retry is not managed by the Spring Boot BOM.
       #
       # Retry only timeouts and 5xx. Never a 409 — that is a definitive answer,
       # and retrying it costs three round trips to hear the same "no".
       #
-      # This is only safe because every /internal endpoint is idempotent
-      # (ADR-0003). Under the specification's original non-idempotent decrement, this
-      # retry is precisely the mechanism that double-decrements stock.
+      # This is safe because every internal endpoint is idempotent. Retrying a
+      # non-idempotent decrement after a lost response could reduce stock twice.
       max-attempts: 2
       backoff: PT0.2S
 
@@ -117,7 +110,6 @@ server:
   forward-headers-strategy: framework
 
 ---
-# ----------------------------------------------------------------------- test
 spring:
   config:
     activate:
