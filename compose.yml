@@ -4,11 +4,11 @@ services:
     environment:
       POSTGRES_DB: db_catalog
       POSTGRES_USER: ${PG_CATALOG_USER:-catalog_user}
-      POSTGRES_PASSWORD: ${PG_CATALOG_PASSWORD:-change-me}
-    ports: ["5433:5432"]
+      POSTGRES_PASSWORD: ${PG_CATALOG_PASSWORD:?required -> set PG_CATALOG_PASSWORD in .env, see .env.example}
+    ports: ["127.0.0.1:5433:5432"]
     volumes: [pgdata-catalog:/var/lib/postgresql]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_CATALOG_USER:-catalog_user} -d db_catalog"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -18,11 +18,11 @@ services:
     environment:
       POSTGRES_DB: db_order
       POSTGRES_USER: ${PG_ORDER_USER:-order_user}
-      POSTGRES_PASSWORD: ${PG_ORDER_PASSWORD:-change-me}
-    ports: ["5434:5432"]
+      POSTGRES_PASSWORD: ${PG_ORDER_PASSWORD:?required - set PG_ORDER_PASSWORD in .env, see .env.example}
+    ports: ["127.0.0.1:5434:5432"]
     volumes: [pgdata-order:/var/lib/postgresql]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_ORDER_USER:-order_user} -d db_order"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -32,11 +32,12 @@ services:
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?required - set KEYCLOAK_ADMIN_PASSWORD in .env, see .env.example}
       KC_HEALTH_ENABLED: "true"
 
       KC_HOSTNAME: http://localhost:8080
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      ORDER_CLIENT_SECRET: ${ORDER_CLIENT_SECRET:?required - set ORDER_CLIENT_SECRET in .env, see .env.example}
     volumes:
       - ./infra/keycloak:/opt/keycloak/data/import:ro
     ports: ["8080:8080"]
@@ -58,7 +59,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker,demo
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-catalog:5432/db_catalog
       SPRING_DATASOURCE_USERNAME: ${PG_CATALOG_USER:-catalog_user}
-      SPRING_DATASOURCE_PASSWORD: ${PG_CATALOG_PASSWORD:-change-me}
+      SPRING_DATASOURCE_PASSWORD: ${PG_CATALOG_PASSWORD:?required - set PG_CATALOG_PASSWORD in .env, see .env.example}
       VOLT_KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/volt
       VOLT_KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/volt/protocol/openid-connect/certs
     ports: ["8081:8081"]
@@ -66,7 +67,7 @@ services:
       postgres-catalog: { condition: service_healthy }
       keycloak:         { condition: service_healthy }
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -79,26 +80,25 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/db_order
       SPRING_DATASOURCE_USERNAME: ${PG_ORDER_USER:-order_user}
-      SPRING_DATASOURCE_PASSWORD: ${PG_ORDER_PASSWORD:-change-me}
+      SPRING_DATASOURCE_PASSWORD: ${PG_ORDER_PASSWORD:?required - set PG_ORDER_PASSWORD in .env, see .env.example}
       VOLT_KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/volt
       VOLT_KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/volt/protocol/openid-connect/certs
       VOLT_CATALOG_BASE_URL: http://catalog-service:8081
       VOLT_CATALOG_TOKEN_URI: http://keycloak:8080/realms/volt/protocol/openid-connect/token
       VOLT_CATALOG_CLIENT_ID: volt-order
-      VOLT_CATALOG_CLIENT_SECRET: ${ORDER_CLIENT_SECRET:-dev-only-not-a-real-secret}
+      VOLT_CATALOG_CLIENT_SECRET: ${ORDER_CLIENT_SECRET:?required - set ORDER_CLIENT_SECRET in .env, see .env.example}
     ports: ["8082:8082"]
     depends_on:
       postgres-order:  { condition: service_healthy }
       keycloak:        { condition: service_healthy }
       catalog-service: { condition: service_healthy }
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 20s
 
-  # ------------------------------------------------------------------- frontend
   frontend:
     build:
       context: ./frontend
@@ -106,7 +106,7 @@ services:
         VITE_KEYCLOAK_URL: http://localhost:8080
         VITE_KEYCLOAK_REALM: volt
         VITE_KEYCLOAK_CLIENT_ID: volt-web
-    ports: ["4200:80"]
+    ports: ["5173:80"]
     depends_on:
       catalog-service: { condition: service_healthy }
       order-service:   { condition: service_healthy }
